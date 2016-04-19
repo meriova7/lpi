@@ -55,6 +55,14 @@ class Variable(Formula):
     def __repr__(self):
         return "Variable(%r)" % (self.name,)
 
+    # cviko
+    
+    def getType(self, sign):
+        return tableau.ALPHA
+    def signedSubf(self, sign):
+        return []
+    
+
 class Negation(Formula):
     def __init__(self, orig):
         Formula.__init__(self, [orig])
@@ -65,6 +73,14 @@ class Negation(Formula):
     def toString(self):
         return "-%s" % (self.originalFormula().toString())
 
+    # cviko
+    
+    def getType(self, sign):
+        return tableau.ALPHA
+    def signedSubf(self, sign):
+        return [tableau.SignedFormula(not sign, self.originalFormula())]
+    
+
 class Disjunction(Formula):
     def __init__(self, subs):
         Formula.__init__(self, subs)
@@ -73,6 +89,16 @@ class Disjunction(Formula):
     def toString(self):
         return '(' + '|'.join(f.toString() for f in self.subf()) + ')'
 
+    # cviko
+    
+    def getType(self, sign):
+        if sign:
+            return tableau.BETA
+        return tableau.ALPHA
+    
+    def signedSubf(self, sign):
+        return [tableau.SignedFormula(sign, sf) for sf in self.subf()]
+
 class Conjunction(Formula):
     def __init__(self, subs):
         Formula.__init__(self, subs)
@@ -80,6 +106,16 @@ class Conjunction(Formula):
         return all(f.eval(i) for f in self.subf())
     def toString(self):
         return '(' + '&'.join(f.toString() for f in self.subf()) + ')'
+
+    # cviko
+    
+    def getType(self, sign):
+        if sign:
+            return tableau.ALPHA
+        return tableau.BETA
+    
+    def signedSubf(self, sign):
+        return [tableau.SignedFormula(sign, sf) for sf in self.subf()]
 
 class BinaryFormula(Formula):
     def __init__(self, left, right, connective = ''):
@@ -98,10 +134,31 @@ class Implication(BinaryFormula):
     def eval(self, i):
         return (not self.leftSide().eval(i)) or self.rightSide().eval(i)
 
+    # cviko
+    
+    def getType(self, sign):
+        if sign:
+            return tableau.BETA
+        return tableau.ALPHA
+    
+    def signedSubf(self, sign):
+        return [tableau.SignedFormula(not sign, self.leftSide()), tableau.SignedFormula(sign, self.rightSide())]
+
 class Equivalence(BinaryFormula):
     def __init__(self, left, right):
         BinaryFormula.__init__(self, left, right, '<=>')
     def eval(self, i):
         return self.leftSide().eval(i) == self.rightSide().eval(i)
+
+    # cviko
+    
+    def getType(self, sign):
+        if sign:
+            return tableau.ALPHA
+        return tableau.BETA
+    
+    def signedSubf(self, sign):
+        return [tableau.SignedFormula(sign, Implication(self.leftSide(), self.rightSide())),
+                tableau.SignedFormula(sign, Implication(self.rightSide(), self.leftSide()))]
 
 # vim: set sw=4 ts=8 sts=4 et :
